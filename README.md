@@ -2,6 +2,7 @@
 Linux kernel driver for the Guncon3 light gun from Namco.
 
 I have only tested this module on Ubuntu 14.04 and there are couple of bugs, some work is still required to make it as stable as I want. 
+Tested on Ubuntu 17.04
 
 ### Build and Installation
 
