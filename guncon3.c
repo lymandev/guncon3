@@ -104,9 +104,13 @@ MODULE_DEVICE_TABLE(usb, usb_guncon3_id_table);
 
 static int guncon3_decode(unsigned char *data, const unsigned char *key) {
     int x, y, key_index;
-    unsigned char bkey, keyr, a_sum, b_sum, key_offset, byte;
+    unsigned char bkey, keyr, byte;
+    s32 a_sum,b_sum;
+    s32 key_offset;
     b_sum = ((data[13] ^ data[12]) + data[11] + data[10] - data[9] - data[8]) ^ data[7];
+    b_sum &=0xFF;
     a_sum = (((data[6] ^ b_sum) - data[5] - data[4]) ^ data[3]) + data[2] + data[1] - data[0];
+    a_sum &=0xFF;
     if (a_sum != key[7]) {
         if (debug)
             printk(KERN_ERR "checksum mismatch: %02x %02x\n", a_sum, key[7]);
@@ -114,7 +118,7 @@ static int guncon3_decode(unsigned char *data, const unsigned char *key) {
     }
 
     key_offset = (((((key[1] ^ key[2]) - key[3] - key[4]) ^ key[5]) + key[6] - key[7]) ^ data[14]) + (unsigned char)0x26;
-
+    key_offset &= 0xFF;
     key_index = 4;
 
     //byte E is part of the key offset
@@ -174,8 +178,11 @@ static void usb_guncon3_irq(struct urb *urb)
 		printk("\n");
 	}
 	/* aim */
-	input_report_abs(dev, ABS_X, ((short)data[4] << 8) | (short)data[3]);
-	input_report_abs(dev, ABS_Y, ((short)data[6] << 8) | (short)data[5]);
+	//(__s16) le16_to_cpup((__le16 *)(data + 12))
+	__s16 temp_aim= __le16_to_cpu( ((u16)data[4])*256 + ((u16)data[3]));
+	input_report_abs(dev, ABS_X, temp_aim);
+	temp_aim= __le16_to_cpu( ((u16)data[6])*256 + ((u16)data[5]));
+	input_report_abs(dev, ABS_Y, temp_aim);
     // Z axis (data[8] << 8) + data[7]
 
 	/* joystick a/b */
