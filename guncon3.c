@@ -179,9 +179,19 @@ static void usb_guncon3_irq(struct urb *urb)
 	}
 	/* aim */
 	//(__s16) le16_to_cpup((__le16 *)(data + 12))
-	__s16 temp_aim= __le16_to_cpu( ((u16)data[4])*256 + ((u16)data[3]));
+	__s16 temp_aim;
+	uint16_t udata;
+	udata = data[4];
+	udata*=256;
+	udata+= data[3];
+	temp_aim = ((__s16) udata);
+//	__s16 temp_aim= __le16_to_cpu( ((u16)data[4])*256 + ((u16)data[3]));
 	input_report_abs(dev, ABS_X, temp_aim);
-	temp_aim= __le16_to_cpu( ((u16)data[6])*256 + ((u16)data[5]));
+	udata = data[6];
+	udata*=256;
+	udata+= data[5];
+	temp_aim = ((__s16) udata);
+//	temp_aim= __le16_to_cpu( ((u16)data[6])*256 + ((u16)data[5]));
 	input_report_abs(dev, ABS_Y, temp_aim);
     // Z axis (data[8] << 8) + data[7]
 
