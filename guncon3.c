@@ -352,16 +352,19 @@ static int guncon3_init_input(struct usb_interface *intf, struct usb_guncon3 *gu
 
 static void guncon3_deinit_input(struct usb_guncon3 *guncon3)
 {
-    usb_free_coherent(guncon3->usbdev, 8, guncon3->idata, guncon3->idata_dma);
-    usb_unlink_urb(guncon3->irq_in);
+    
+    
     usb_free_urb(guncon3->irq_in);
+    usb_free_coherent(guncon3->usbdev, 8, guncon3->idata, guncon3->idata_dma);
+    input_unregister_device(guncon3->dev);
 }
 
 static void guncon3_deinit_output(struct usb_guncon3 *guncon3)
 {
-    usb_free_coherent(guncon3->usbdev, 8, guncon3->odata, guncon3->odata_dma);
-    usb_unlink_urb(guncon3->irq_out);
+    
+   
     usb_free_urb(guncon3->irq_out);
+    usb_free_coherent(guncon3->usbdev, 8, guncon3->odata, guncon3->odata_dma);
 }
 
 static int guncon3_send_key(struct usb_guncon3 *guncon3)
@@ -499,13 +502,15 @@ static void usb_guncon3_disconnect(struct usb_interface *intf)
 {
 	struct usb_guncon3 *guncon3 = usb_get_intfdata(intf);
 
-	usb_set_intfdata(intf, NULL);
+	
 	if (guncon3) {
 		guncon3_deinit_input(guncon3);
 		guncon3_deinit_output(guncon3);
-        input_set_drvdata(guncon3->dev, NULL);
+        	input_set_drvdata(guncon3->dev, NULL);
 		kfree(guncon3);
+		usb_set_intfdata(intf, NULL);
 	}
+	
 }
 
 static struct usb_driver usb_guncon3_driver = {
