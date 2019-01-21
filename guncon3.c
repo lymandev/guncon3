@@ -23,7 +23,7 @@
 #include <linux/usb.h>
 #include <linux/usb/input.h>
 
-static unsigned long debug = 0;
+static unsigned long debug = 1;
 module_param(debug, ulong, 0444);
 MODULE_PARM_DESC(debug, "Enable Debugging");
 
@@ -68,6 +68,7 @@ struct usb_guncon3 {
 	struct input_dev *dev;
 	struct urb *irq_in;
 	struct urb *irq_out;
+        struct usb_interface *intf;
 	int open;
     int ipipe, opipe;
     unsigned char key[8];
@@ -80,11 +81,11 @@ struct usb_guncon3 {
 };
 
 static const signed short guncon3_buttons[] = {
-	BTN_TRIGGER,
-	BTN_0, BTN_1,                   /* Buttons A1/A2 */
-	BTN_2, BTN_3,                   /* Buttons B1/B2 */
-	BTN_4, BTN_5,                   /* Buttons C1/C2 */
-	BTN_6, BTN_7,                   /* Joystick buttons */
+	BTN_A,
+	BTN_B, BTN_X,                   /* Buttons A1/A2 */
+	BTN_Y, BTN_START,                   /* Buttons B1/B2 */
+	BTN_SELECT, BTN_THUMBL,                   /* Buttons C1/C2 */
+	BTN_THUMBR, BTN_TL2,                   /* Joystick buttons */
 	-1
 };
 
@@ -92,6 +93,14 @@ static const signed short guncon3_sticks[] = {
 	ABS_X, ABS_Y,					/* Aiming */
     ABS_RX, ABS_RY,			/* Joystick A */
 	ABS_HAT0X, ABS_HAT0Y,			/* Joystick B */
+	-1
+};
+
+static const char hat_to_buttons=1;
+
+static const signed short guncon3_hat_to_buttons[] = {
+	BTN_TRIGGER_HAPPY1,BTN_TRIGGER_HAPPY2,
+	BTN_TRIGGER_HAPPY3,BTN_TRIGGER_HAPPY4,
 	-1
 };
 
@@ -198,19 +207,30 @@ static void usb_guncon3_irq(struct urb *urb)
 	/* joystick a/b */
 	input_report_abs(dev, ABS_RX, data[11]);
 	input_report_abs(dev, ABS_RY, data[12]);
+
+	if(hat_to_buttons==1)
+	{
+	input_report_key(dev, guncon3_hat_to_buttons[0], (data[9]>220)?1:0);
+	input_report_key(dev, guncon3_hat_to_buttons[1], (data[9]<30)?1:0);
+	input_report_key(dev, guncon3_hat_to_buttons[2], (data[10]>220)?1:0);
+	input_report_key(dev, guncon3_hat_to_buttons[3], (data[10]<30)?1:0);
+	}
+	else
+	{
 	input_report_abs(dev, ABS_HAT0X, data[9]);
 	input_report_abs(dev, ABS_HAT0Y, data[10]);
+	}
 
     /* buttons */
-    input_report_key(dev, BTN_TRIGGER, (data[1] & 0x20));
-    input_report_key(dev, BTN_0, (data[0] & 0x04));    // A
-    input_report_key(dev, BTN_1, (data[0] & 0x02));
-    input_report_key(dev, BTN_2, (data[1] & 0x04));    // B
-    input_report_key(dev, BTN_3, (data[1] & 0x02));
-    input_report_key(dev, BTN_4, (data[1] & 0x80));    // C
-    input_report_key(dev, BTN_5, (data[0] & 0x08));
-    input_report_key(dev, BTN_6, (data[2] & 0x80));    // Joystick buttons
-    input_report_key(dev, BTN_7, (data[2] & 0x40));
+    input_report_key(dev, guncon3_buttons[0], (data[1] & 0x20));
+    input_report_key(dev, guncon3_buttons[1], (data[0] & 0x04));    // A
+    input_report_key(dev, guncon3_buttons[2], (data[0] & 0x02));
+    input_report_key(dev, guncon3_buttons[3], (data[1] & 0x04));    // B
+    input_report_key(dev, guncon3_buttons[4], (data[1] & 0x02));
+    input_report_key(dev, guncon3_buttons[5], (data[1] & 0x80));    // C
+    input_report_key(dev, guncon3_buttons[6], (data[0] & 0x08));
+    input_report_key(dev, guncon3_buttons[7], (data[2] & 0x80));    // Joystick buttons
+    input_report_key(dev, guncon3_buttons[8], (data[2] & 0x40));
 
     input_sync(dev);
 
@@ -405,7 +425,7 @@ static int usb_guncon3_probe(struct usb_interface *intf, const struct usb_device
 	struct usb_host_interface *interface;
 	int i, error;
 	char path[64];
-
+	
 	interface = intf->cur_altsetting;
 
 	// has 2 endpoints, an input and an output
@@ -430,12 +450,26 @@ static int usb_guncon3_probe(struct usb_interface *intf, const struct usb_device
 		error = -ENOMEM;
         goto err_free_guncon;
 	}
+
+    guncon3->intf = intf;
     guncon3->usbdev = usbdev;
     guncon3->dev = input_dev;
 
     guncon3->ipipe = usb_sndintpipe(usbdev, endpoint_in->bEndpointAddress);
     guncon3->opipe = usb_rcvintpipe(usbdev, endpoint_out->bEndpointAddress);
 
+	usb_make_path(usbdev, guncon3->phys, sizeof(guncon3->phys));
+        strlcat(guncon3->phys, "/input0", sizeof(guncon3->phys));
+	sprintf(guncon3->name, "guncon3");
+
+	input_dev->name = guncon3->name;
+	input_dev->phys = guncon3->phys;
+	usb_to_input_id(usbdev, &input_dev->id);
+        input_dev->dev.parent = &guncon3->intf->dev;
+	input_dev->open = usb_guncon3_open;
+	input_dev->close = usb_guncon3_close;
+	input_set_drvdata(input_dev, guncon3);
+  
     error = guncon3_init_output(intf, guncon3);
     if (error)
         goto err_free_device;
@@ -444,48 +478,50 @@ static int usb_guncon3_probe(struct usb_interface *intf, const struct usb_device
     if (error)
         goto err_free_output;
 
-    // reports keys and absolute position
-    __set_bit(EV_KEY, input_dev->evbit);
-    __set_bit(EV_ABS, input_dev->evbit);
+    usb_set_intfdata(intf, guncon3);
+    
+      
 
-    // the buttons are keys
-	for (i = 0; guncon3_buttons[i] >= 0; ++i)
-        __set_bit(guncon3_buttons[i], input_dev->keybit);
-
-    // the sticks are abs
 	for (i = 0; guncon3_sticks[i] >= 0; ++i) {
 		signed short t = guncon3_sticks[i];
-        __set_bit(t, input_dev->absbit);
+
 		switch (t) {
 			case ABS_X: input_set_abs_params(input_dev, t, -32768, 32767, 16, 128); break;
 			case ABS_Y: input_set_abs_params(input_dev, t, 32767, -32768, 16, 128); break;
 			case ABS_RX:
-            case ABS_RY:
+		    case ABS_RY:
+				input_set_abs_params(input_dev, t, 0, 255, 4, 8);
+				break;
             case ABS_HAT0X:
-            case ABS_HAT0Y: input_set_abs_params(input_dev, t, 0, 255, 4, 8); break;
+            case ABS_HAT0Y: 
+				if(hat_to_buttons==0)
+				{
+				input_set_abs_params(input_dev, t, 0, 255, 4, 8);
+				}
+				
+
+			break;
 		}
 	}
+	if(hat_to_buttons==1)
+	{
+	for (i = 0; guncon3_hat_to_buttons[i] >= 0; ++i) {
+	input_set_capability(input_dev, EV_KEY, guncon3_hat_to_buttons[i]);
+	}
+	}
 
-	usb_make_path(usbdev, path, 64);
-	sprintf(guncon3->phys, "%s/input0", path);
+	for (i = 0; guncon3_buttons[i] >= 0; ++i) {
+	input_set_capability(input_dev, EV_KEY, guncon3_buttons[i]);
+	}
 
-	input_dev->name = guncon3->name;
-	input_dev->phys = guncon3->phys;
-	usb_to_input_id(usbdev, &input_dev->id);
-	input_set_drvdata(input_dev, guncon3);
-	input_dev->open = usb_guncon3_open;
-	input_dev->close = usb_guncon3_close;
-
-    sprintf(guncon3->name, "GunCon3");
-
-    guncon3_send_key(guncon3);
+        guncon3_send_key(guncon3);
 
 	input_register_device(guncon3->dev);
 
 	if (debug)
 		printk(KERN_INFO "guncon3: input: %s on %s\n", guncon3->name, path);
 
-	usb_set_intfdata(intf, guncon3);
+	
 
 	return 0;
     err_free_output:
