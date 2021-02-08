@@ -17,8 +17,10 @@ There are couple of bugs and some work is still required to make it fully stable
 
 Install [RetroPie](https://retropie.org.uk/download/) then press `shift+F4` to access the terminal. Then download and install the following:
 
-`$ sudo apt-get install git bc bison flex libssl-dev`
-`$ sudo wget https://raw.githubusercontent.com/RPi-Distro/rpi-source/master/rpi-source -O /usr/local/bin/rpi-source && sudo chmod +x /usr/local/bin/rpi-source && /usr/local/bin/rpi-source -q --tag-update`
+```
+$ sudo apt-get install git bc bison flex libssl-dev
+$ sudo wget https://raw.githubusercontent.com/RPi-Distro/rpi-source/master/rpi-source -O /usr/local/bin/rpi-source && sudo chmod +x /usr/local/bin/rpi-source && /usr/local/bin/rpi-source -q --tag-update
+```
 
 Now run rpi-source, this is needed to build the kernal driver.
 
@@ -44,9 +46,11 @@ and now move to the /guncon3 folder.
 
 Now we can build and install the driver using `make`.
 
-`$ make`
-`$ sudo make modules_install`
-`$ sudo depmod -a`
+```
+$ make
+$ sudo make modules_install
+$ sudo depmod -a
+```
 
 The driver should now be built and installed you can now enable it with `modprobe`.
 
@@ -60,8 +64,10 @@ Once the module is installed the Guncon3 should appear as a regular joystick tha
 
 Now lets check that your controller is found and working.
 
-`$ cd /dev/input/`
-`$ ls -al`
+```
+$ cd /dev/input/
+$ ls -al
+```
 
 You should see js0 (depending on how many controllers you have connected it might be js1). Finally we can test it by running:
 
@@ -73,8 +79,10 @@ You should now see your controller registering inputs on the screen.
 
 The last thing we can do is copy the Guncon3 config file for RetroPie.
 
-`$ cd /home/pi/guncon3`
-`$ cp guncon3.cfg /home/pi/.config/retroarch/autoconfig`
+```
+$ cd /home/pi/guncon3
+$ cp guncon3.cfg /home/pi/.config/retroarch/autoconfig
+```
 
 You can now return to RetroPie and navigate the menu using the guncon!
 
