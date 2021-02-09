@@ -1,6 +1,6 @@
 # Overview
 ## Guncon 3
- The Guncon 3 was originally released for the PlayStation 3. It is a USB light gun controller that uses IR leds for aiming. The Guncon 3 was used with the games Time Crisis 4, Time Crisis: Razing Storm, and Deadstrom Pirates.
+ The Guncon 3 was originally released for the PlayStation 3. It is a USB light gun controller that uses IR leds for aiming. The Guncon 3 was used with the games Time Crisis 4, Time Crisis: Razing Storm, and Deadstorm Pirates.
 
 ## Kernel Driver
 Linux kernel driver for the Namco Guncon 3 light gun. The kernal driver is written in C and was originally developed by [beardypig](https://github.com/beardypig/guncon3).
